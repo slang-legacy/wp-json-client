@@ -144,8 +144,6 @@ class MenuItem extends ContentObject
     'xfn'
   ]
 
-class Menu extends ContentObject
-  model: MenuItem
 
 class ObjectCollection extends Backbone.Collection
   constructor: (@wp) ->
