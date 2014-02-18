@@ -1,0 +1,17 @@
+{
+  "name": "wp-json-client",
+  "repo": "slang800/wp-json-client",
+  "description": "A JavaScript client for wp-json-api",
+  "version": "0.0.1",
+  "keywords": [],
+  "dependencies": {
+    "components/backbone": "*",
+    "learnboost/jsonp": "*"
+  },
+  "development": {},
+  "license": "MIT",
+  "main": "index.js",
+  "scripts": [
+    "index.coffee"
+  ]
+}
