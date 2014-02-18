@@ -1,7 +1,6 @@
-#TODO: rewrite with promises
 jsonp = require 'jsonp'
 Backbone = require 'backbone'
-window._ = require 'underscore'
+_ = require 'underscore'
 
 class ContentObject extends Backbone.Model
   defaultFields: []
@@ -230,6 +229,25 @@ class MenuItems extends ObjectCollection
 
     model.unset 'menu_item_parent'
 
+###*
+ * Lightweight wrapper around MenuItems
+###
+class Menu extends Backbone.Model
+  name: ''
+
+  ###*
+   * [items description]
+   * @type {MenuItems}
+  ###
+  items: undefined
+
+  constructor: (wp) ->
+    super()
+    @set(items: new MenuItems(wp))
+
+
+class Menus extends Backbone.Collection
+  model: Menu
 
 ###*
  * Handles inter-object relationships, caching, and interacting with the
@@ -259,7 +277,7 @@ class WordPress
     @cache.authors = new Authors(this)
     @cache.comments = new Comments(this)
     @cache.attachments = new Attachments(this)
-    @cache.menus = {}
+    @cache.menus = new Menus()
 
   makeURL: (params) ->
     query = []
@@ -289,11 +307,12 @@ class WordPress
       unless err
         @cache.pages.add data['pages']
 
-  getMenu: (name, cb) =>
+  getMenu: (name) =>
     @request 'get_menu', name:name, (err, data) =>
       unless err
-        @cache.menus[name] = new MenuItems(this)
-        @cache.menus[name].add(data['menu'])
-        cb(@cache.menus[name])
+        menu = new Menu(this)
+        menu.set(name: name)
+        menu.get('items').add(data['menu'])
+        @cache.menus.add(menu)
 
 module.exports = WordPress
