@@ -7,7 +7,9 @@
   "dependencies": {
     "components/underscore": "*",
     "components/backbone": "*",
-    "learnboost/jsonp": "*"
+    "learnboost/jsonp": "*",
+    "jeromegn/Backbone.localStorage": "*",
+    "slang800/Backbone-relational": "*"
   },
   "development": {},
   "license": "MIT",

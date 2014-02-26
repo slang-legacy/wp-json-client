@@ -1,6 +1,7 @@
 jsonp = require 'jsonp'
-Backbone = require 'backbone'
 _ = require 'underscore'
+Backbone = require 'backbone'
+Backbone.LocalStorage = require 'Backbone.localStorage'
 
 class ContentObject extends Backbone.Model
   defaultFields: []
@@ -145,32 +146,50 @@ class MenuItem extends ContentObject
 
 
 class ObjectCollection extends Backbone.Collection
-  constructor: (@wp) ->
+  ###*
+   * @param {WordPress} @wp Used to let the collection interact with other
+     collections from the WordPress instance.
+   * @param {String} [@name] The name of the collection. Must be unique within
+     the application. Used for localstorage.
+  ###
+  constructor: (@wp, @collectionName) ->
     super()
-    @on('add', @processObject)
+    @on 'add', @processObject
+    @on 'change', @saveModel
+
+    if @collectionName?
+      @localStorage = new Backbone.LocalStorage @collectionName
+      console.log @localStorage
 
   ###*
    * Take an object out of a model replacing it with a reference to the
      removed field and put the removed field into its own collection
    * @param {ContentObject} model
    * @param {String} fieldName The name of the field to abstract.
-   * @param {String} [collectionName=fieldName] The name of the collection to
-     put the removed object into. If omitted, the fieldName will be used.
+   * @param {String} [targetCollectionName=fieldName] The name of the
+     collection to put the removed object into.
   ###
-  abstractField: (model, fieldName, collectionName='') ->
-    if collectionName is '' then collectionName = fieldName
+  abstractField: (model, fieldName, targetCollectionName) ->
+    if not targetCollectionName? then targetCollectionName = fieldName
     field = model.get fieldName
     unless field? then return
 
     # when adding models, it doesn't matter if it's an array - Backbone deals
     # with that
-    model.set fieldName, @wp.cache[collectionName].add(field, merge: true)
+    model.set fieldName, @wp.cache[targetCollectionName].add(field, merge: true)
 
   ###*
    * Deal with objects that are inside of the model
    * @param {ContentObject} model
   ###
   processObject: (model) ->
+
+  ###*
+   * Make the model get saved after it's changed
+   * @param {ContentObject} model
+  ###
+  saveModel: (model) ->
+    model.save()
 
 
 class Posts extends ObjectCollection
@@ -246,7 +265,7 @@ class Menu extends Backbone.Model
     @set(items: new MenuItems(wp))
 
 
-class Menus extends Backbone.Collection
+class Menus extends ObjectCollection
   model: Menu
 
 ###*
@@ -270,14 +289,14 @@ class WordPress
 
   constructor: (@backendURL) ->
     # these need to be made here to set @wp (`this`) properly
-    @cache.posts = new Posts(this)
-    @cache.pages = new Posts(this)
-    @cache.categories = new Categories(this)
-    @cache.tags = new Tags(this)
-    @cache.authors = new Authors(this)
-    @cache.comments = new Comments(this)
-    @cache.attachments = new Attachments(this)
-    @cache.menus = new Menus()
+    @cache.posts = new Posts(this, 'posts')
+    @cache.pages = new Posts(this, 'pages')
+    @cache.categories = new Categories(this, 'categories')
+    @cache.tags = new Tags(this, 'tags')
+    @cache.authors = new Authors(this, 'authors')
+    @cache.comments = new Comments(this, 'comments')
+    @cache.attachments = new Attachments(this, 'attachments')
+    @cache.menus = new Menus(this, 'menus')
 
   makeURL: (params) ->
     query = []
@@ -293,6 +312,15 @@ class WordPress
   request: (method, params={}, cb) ->
     params['json'] = method
     jsonp(@makeURL(params), {}, cb)
+
+  ###*
+   * Load everything from the cache. this should be called after all the
+     events are attached to the various collections, and before anything is
+     added to the collections.
+  ###
+  loadCache: ->
+    for collection in @cache
+      collection.fetch()
 
   ###*
    * [getPosts description]
